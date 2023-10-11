@@ -1,0 +1,11 @@
+RewriteEngine on
+# A linha acima habilita a reescrita de URL do Apache
+RewriteCond %{REQUEST_FILENAME} !-f
+# Verifica se o caminho especificado na requisição não corresponde a um arquivo existente no servidor.
+RewriteCond %{REQUEST_FILENAME} !-d
+#  Verifica se o caminho especificado na requisição não corresponde a um diretório existente no servidor.
+RewriteRule ^(.*)$ index.php?path=$1 [QSA]
+# --------------------------------------------------------
+# A regra de reescrita em si. Se as condições anteriores forem atendidas, esta regra redirecionará a requisição para index.php e passará o caminho original como um parâmetro GET chamado path.
+# ^(.*)$: Captura qualquer coisa (.*) no final da URL e armazena como $1.
+# index.php?path=$1: Redireciona para index.php passando o caminho capturado como um parâmetro GET chamado path.
