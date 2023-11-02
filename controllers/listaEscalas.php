@@ -181,16 +181,28 @@ if ($api == 'listaEscalas') {
             $horarioCriacao = date("H:i:s");
 
             if (!array_key_exists('nomeLista', $dados)) {
+                echo json_encode([
+                    "message" => "erro ao criar lista de escala"
+                ]);
                 exit;
             }
             if (!array_key_exists('turma', $dados)) {
+                echo json_encode([
+                    "message" => "erro ao criar lista de escala"
+                ]);
                 exit;
             }
             if (!array_key_exists('operadoresForaEscala', $dados)) {
+                echo json_encode([
+                    "message" => "erro ao criar lista de escala"
+                ]);
                 exit;
             }
 
             if (!array_key_exists('escala', $dados)) {
+                echo json_encode([
+                    "message" => "erro ao criar lista de escala"
+                ]);
                 exit;
             }
 
