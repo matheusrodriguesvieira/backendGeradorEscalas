@@ -32,7 +32,7 @@ if ($api == 'listaEscalas') {
                 $obj[$i]['escala'] = [];
                 $obj[$i]['operadoresForaEscala'] = [];
 
-                $sql = $db->prepare("SELECT operadores.matricula, operadores.nome, tag FROM operadorequipamento, operadores where operadores.matricula = operadorequipamento.matricula and operadorequipamento.idlista = ?");
+                $sql = $db->prepare("SELECT operadores.matricula, operadores.nome, tag, operadorequipamento.localizacao, operadorequipamento.atividade, operadorequipamento.transporte FROM operadorequipamento, operadores where operadores.matricula = operadorequipamento.matricula and operadorequipamento.idlista = ?");
                 $sql->execute([$obj[$i]['idLista']]);
                 $escala = $sql->fetchAll(PDO::FETCH_ASSOC);
 
@@ -78,7 +78,7 @@ if ($api == 'listaEscalas') {
             $obj['escala'] = [];
             $obj['operadoresForaEscala'] = [];
 
-            $sql = $db->prepare("SELECT operadores.matricula, operadores.nome, tag FROM operadorequipamento, operadores where operadores.matricula = operadorequipamento.matricula and operadorequipamento.idlista = ?");
+            $sql = $db->prepare("SELECT operadores.matricula, operadores.nome, tag, operadorequipamento.localizacao, operadorequipamento.atividade, operadorequipamento.transporte FROM operadorequipamento, operadores where operadores.matricula = operadorequipamento.matricula and operadorequipamento.idlista = ?");
             $sql->execute([$parametro]);
             $escala = $sql->fetchAll(PDO::FETCH_ASSOC);
 
@@ -114,7 +114,10 @@ if ($api == 'listaEscalas') {
                 //     "escala" : [
                 //         {
                 //             "matricula": MATRICULA,
-                //             "tag": TAG
+                //             "tag": TAG,
+                //             "localizacao": LOCALIZAÇÃO
+                //             "atividade": ATIVIDADE
+                //             "transporte": TRANSPORTE   
                 //         },
                 //     ]
                 // }
@@ -136,7 +139,7 @@ if ($api == 'listaEscalas') {
                 }
 
                 foreach ($dados['escala'] as $escala) {
-                    if (!array_key_exists('matricula', $escala) || !array_key_exists('tag', $escala)) {
+                    if (!array_key_exists('matricula', $escala) || !array_key_exists('tag', $escala) || !array_key_exists('localizacao', $escala) || !array_key_exists('atividade', $escala) || !array_key_exists('transporte', $escala)) {
                         echo json_encode([
                             "message" => "Parâmetros incompletos."
                         ]);
@@ -244,8 +247,8 @@ if ($api == 'listaEscalas') {
                             $sql->execute([$parametro, $valor['matricula']]);
                         }
 
-                        $sql = $db->prepare("UPDATE operadorequipamento SET  matricula = ? WHERE operadorequipamento.idlista = ? and operadorequipamento.tag = ?");
-                        $sql->execute([$valor['matricula'], $parametro, $valor['tag']]);
+                        $sql = $db->prepare("UPDATE operadorequipamento SET  matricula = ?, localizacao = ?, atividade = ?, transporte = ? WHERE operadorequipamento.idlista = ? and operadorequipamento.tag = ?");
+                        $sql->execute([$valor['matricula'], $valor['localizacao'], $valor['atividade'], $valor['transporte'], $parametro, $valor['tag']]);
                     }
 
                     $db->commit();
@@ -278,7 +281,10 @@ if ($api == 'listaEscalas') {
             //     "escala" : [
             //         {
             //             "matricula": MATRICULA,
-            //             "tag": TAG
+            //             "tag": TAG,
+            //              "localizacao": LOCALIZAÇÃO
+            //              "atividade": ATIVIDADE
+            //              "transporte": TRANSPORTE   
             //         },
             //     ]
             // }
@@ -326,7 +332,7 @@ if ($api == 'listaEscalas') {
             }
 
             foreach ($dados['escala'] as $escala) {
-                if (!array_key_exists('matricula', $escala) || !array_key_exists('tag', $escala)) {
+                if (!array_key_exists('matricula', $escala) || !array_key_exists('tag', $escala) || !array_key_exists('localizacao', $escala) || !array_key_exists('atividade', $escala) || !array_key_exists('transporte', $escala)) {
                     echo json_encode([
                         "message" => "Parâmetros incompletos."
                     ]);
@@ -454,11 +460,11 @@ if ($api == 'listaEscalas') {
                 }
 
                 // Inserir na tabela operadorequipamento
-                $comando = "INSERT INTO operadorequipamento (matricula, tag, idLista) VALUES (?,?,?)";
+                $comando = "INSERT INTO operadorequipamento (matricula, tag, idLista, localizacao, atividade, transporte) VALUES (?,?,?,?,?,?)";
                 $sql = $db->prepare($comando);
 
                 foreach (array_values($dados['escala']) as $valores) {
-                    $sql->execute([$valores['matricula'], $valores['tag'], $idLista]);
+                    $sql->execute([$valores['matricula'], $valores['tag'], $idLista, $valores['localizacao'], $valores['atividade'], $valores['transporte']]);
                 }
 
 

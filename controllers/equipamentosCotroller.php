@@ -5,7 +5,7 @@ if ($api == 'equipamentos') {
         if ($acao == 'index' && $parametro == '') {
 
             $db = DB::connect();
-            $sql = $db->prepare("SELECT * FROM equipamentos");
+            $sql = $db->prepare("SELECT equipamentos.tag, equipamentos.categoria, equipamentos.disponivel FROM equipamentos");
             $sql->execute();
             $obj = $sql->fetchAll(PDO::FETCH_ASSOC);
 
@@ -23,7 +23,7 @@ if ($api == 'equipamentos') {
 
         if ($acao == 'show' && $parametro != '') {
             $db = DB::connect();
-            $sql = $db->prepare("SELECT * FROM equipamentos WHERE equipamentos.tag = '{$parametro}'");
+            $sql = $db->prepare("SELECT equipamentos.tag, equipamentos.categoria, equipamentos.disponivel FROM equipamentos WHERE equipamentos.tag = '{$parametro}'");
             $sql->execute();
             $obj = $sql->fetchObject();
 
@@ -57,30 +57,30 @@ if ($api == 'equipamentos') {
                     exit;
                 }
 
-                $comando = "UPDATE equipamentos SET ";
 
                 $json = file_get_contents("php://input");
                 $dados = json_decode($json, true);
 
-                $contador = 1;
 
-                foreach (array_keys($dados) as $key) {
-                    if (count($dados) > $contador) {
-                        $comando .= "$key = '{$dados[$key]}', ";
-                    } else {
-                        $comando .= "$key = '{$dados[$key]}' ";
-                    }
-
-                    $contador++;
+                if (!array_key_exists('disponivel', $dados)) {
+                    echo json_encode([
+                        "message" => "Parâmetros ausentes"
+                    ]);
+                    exit;
                 }
 
-                $comando .= "WHERE tag = '$parametro'";
+                if ($dados['disponivel'] < 0 || $dados['disponivel'] > 1 || $dados['disponivel'] == null) {
+                    echo json_encode([
+                        "message" => '"disponivel" precisa ser do tipo booleano'
+                    ]);
+                    exit;
+                }
 
-                // echo $comando;
-                $sql = $db->prepare($comando);
+
+                $exec = $db->prepare("UPDATE equipamentos set disponivel = ? where equipamentos.tag = ?");
 
                 try {
-                    $response = $sql->execute();
+                    $response = $exec->execute([$dados['disponivel'], $parametro]);
                     echo json_encode(["message" => "Dados atualizados com sucesso!"]);
                 } catch (Exception $e) {
                     echo json_encode([

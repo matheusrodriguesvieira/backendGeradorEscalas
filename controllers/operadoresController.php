@@ -11,6 +11,10 @@ if ($api == 'operadores') {
             $dados = json_decode($json, true);
 
             if (!$dados) {
+                $response = array(
+                    "message" => 'Parâmetro \'turma\' não encontrado.'
+                );
+                echo json_encode($response);
                 exit;
             }
 
