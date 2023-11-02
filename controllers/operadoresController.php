@@ -2,6 +2,11 @@
 if ($api == 'operadores') {
     if ($metodo == 'GET') {
         if ($acao == 'index' && $parametro == '') {
+
+            // ---------------------------------------
+            // PEGA TODOS OS EQUIPAMENTOS
+            // ---------------------------------------
+
             $db = DB::connect();
             $sql = $db->prepare("SELECT * FROM operadores");
             $sql->execute();
@@ -12,6 +17,10 @@ if ($api == 'operadores') {
         }
 
         if ($acao == 'show' && $parametro != '') {
+            // ---------------------------------------
+            // PEGA UM EQUIPAMENTO ESPECÍFICO
+            // ---------------------------------------
+
             $db = DB::connect();
             $sql = $db->prepare("SELECT * FROM operadores WHERE operadores.matricula = {$parametro}");
             $sql->execute();
