@@ -102,13 +102,13 @@ if ($api == 'listaEscalas') {
 
                 $db = DB::connect();
 
-                try {
-                    $sql = $db->prepare("SELECT * FROM listaescalas WHERE listaescalas.idlista = ?");
-                    $sql->execute([$parametro]);
-                } catch (Exception $e) {
+                $sql = $db->prepare("SELECT * FROM listaescalas WHERE listaescalas.idlista = ?");
+                $sql->execute([$parametro]);
+                $obj = $sql->fetch(PDO::FETCH_ASSOC);
+
+                if (!$obj) {
                     echo json_encode([
-                        "message" => "Não foi possível encontrar a lista",
-                        "error" => $e->getMessage()
+                        "message" => "Não foi possível encontrar a lista"
                     ]);
                     exit;
                 }
@@ -255,13 +255,6 @@ if ($api == 'listaEscalas') {
                 // PEGA O ULTIMO ID INSERIDO
                 $idLista = $db->lastInsertId();
 
-                // Inserir na tabela equipamentoForaEscala
-                // $comando = "INSERT INTO equipamentoForaEscala (tag, idLista) VALUES (?,?)";
-                // $sql = $db->prepare($comando);
-
-                // foreach (array_values($dados["equipamentosForaEscala"]) as $valores) {
-                //     $sql->execute([$valores, $idLista]);
-                // }
 
                 // Inserir na tabela operadorforaescala
                 $comando = "INSERT INTO operadorforaescala (matricula, idLista) VALUES (?,?)";
@@ -293,6 +286,63 @@ if ($api == 'listaEscalas') {
             }
 
             exit;
+        }
+    }
+
+    if ($metodo == 'DELETE') {
+        if ($acao == 'delete') {
+            if ($parametro != "") {
+                $db = DB::connect();
+
+                $sql = 'SELECT * FROM listaescalas where listaescalas.idlista = ?';
+                $sql = $db->prepare($sql);
+                $sql->execute([$parametro]);
+                $obj = $sql->fetch(PDO::FETCH_ASSOC);
+
+                if (!$obj) {
+                    echo json_encode([
+                        "message" => "Não foi possível encontrar a lista"
+                    ]);
+                    exit;
+                }
+
+
+                // -----------------------------
+                // VERIFICA SE EXISTE REFERENCIA NA TABELA DE OPERADOREQUIPAMENTO
+                // -----------------------------
+                $sql = 'SELECT * FROM operadorequipamento where operadorequipamento.idlista = ?';
+                $sql = $db->prepare($sql);
+                $sql->execute([$parametro]);
+                $obj = $sql->fetch(PDO::FETCH_ASSOC);
+
+                if ($obj) {
+                    $sql = 'DELETE FROM operadorequipamento WHERE operadorequipamento.idlista = ?';
+                    $sql = $db->prepare($sql);
+                    $sql->execute([$parametro]);
+                }
+
+
+                // -----------------------------
+                // VERIFICA SE EXISTE REFERENCIA NA TABELA DE OPERADORFORAESCALA
+                // -----------------------------
+                $sql = 'SELECT * FROM operadorforaescala where operadorforaescala.idlista = ?';
+                $sql = $db->prepare($sql);
+                $sql->execute([$parametro]);
+                $obj = $sql->fetch(PDO::FETCH_ASSOC);
+
+                if ($obj) {
+                    $sql = 'DELETE FROM operadorforaescala WHERE operadorforaescala.idlista = ?';
+                    $sql = $db->prepare($sql);
+                    $sql->execute([$parametro]);
+                }
+
+
+                $sql = 'DELETE FROM listaescalas WHERE listaescalas.idlista = ?';
+                $sql = $db->prepare($sql);
+                $sql->execute([$parametro]);
+
+                echo json_encode(["message" => "Dados apagados com sucesso!"]);
+            }
         }
     }
 }
