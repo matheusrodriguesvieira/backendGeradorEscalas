@@ -7,10 +7,33 @@ if ($api == 'operadores') {
             // PEGA TODOS OS EQUIPAMENTOS
             // ---------------------------------------
 
+            $json = file_get_contents("php://input");
+            $dados = json_decode($json, true);
+
+            if (!$dados) {
+                exit;
+            }
+
+            if (!array_key_exists('turma', $dados)) {
+                $response = array(
+                    "message" => 'Parâmetro \'turma\' não encontrado.'
+                );
+                echo json_encode($response);
+                exit;
+            }
+
             $db = DB::connect();
-            $sql = $db->prepare("SELECT * FROM operadores");
-            $sql->execute();
+            $sql = $db->prepare("SELECT * FROM operadores WHERE operadores.turma = ?");
+            $sql->execute([$dados['turma']]);
             $obj = $sql->fetchAll(PDO::FETCH_ASSOC);
+
+            if (!$obj) {
+                $response = array(
+                    "message" => "Nenhum operador encontrado!"
+                );
+                echo json_encode($response);
+                exit;
+            }
 
             echo json_encode($obj);
             exit;
@@ -21,19 +44,20 @@ if ($api == 'operadores') {
             // PEGA UM EQUIPAMENTO ESPECÍFICO
             // ---------------------------------------
 
+
             $db = DB::connect();
             $sql = $db->prepare("SELECT * FROM operadores WHERE operadores.matricula = {$parametro}");
             $sql->execute();
             $obj = $sql->fetchObject();
 
-            if ($obj) {
-                echo json_encode($obj);
-            } else {
+            if (!$obj) {
                 $response = array(
                     "message" => "Nenhum operador encontrado!"
                 );
                 echo json_encode($response);
             }
+
+            echo json_encode($obj);
             exit;
         }
     }

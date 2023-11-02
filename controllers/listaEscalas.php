@@ -5,9 +5,25 @@ if ($api == 'listaEscalas') {
 
             // 1 - PEGAR TODAS AS LISTAS DE ESCALAS E ADICIONAR AS PROPRIEDADES escala, operadoresForaEscala e equipamentosForaEscala como arrays vazios;
             // 2 - FAZER UM LAÇO DE REPETIÇÃO E A CADA LISTA, PEGAR TODOS AS ESCALAS CORRESPONDENTES E ADICIONAR AO ARRAU
+
+            $json = file_get_contents("php://input");
+            $dados = json_decode($json, true);
+
+            if (!$dados) {
+                exit;
+            }
+
+            if (!array_key_exists('turma', $dados)) {
+                $response = array(
+                    "message" => 'Parâmetro \'turma\' não encontrado.'
+                );
+                echo json_encode($response);
+                exit;
+            }
+
             $db = DB::connect();
-            $sql = $db->prepare("SELECT * FROM listaescalas");
-            $sql->execute();
+            $sql = $db->prepare("SELECT * FROM listaescalas WHERE listaescalas.turma = ?");
+            $sql->execute([$dados['turma']]);
             $obj = $sql->fetchAll(PDO::FETCH_ASSOC);
 
 
@@ -31,14 +47,6 @@ if ($api == 'listaEscalas') {
                 for ($j = 0; $j < count($operadorForaEscala); $j++) {
                     $obj[$i]['operadoresForaEscala'][] = $operadorForaEscala[$j];
                 }
-
-                // $sql = $db->prepare("SELECT tag FROM equipamentoforaescala where equipamentoforaescala.idlista = ?");
-                // $sql->execute([$obj[$i]['idLista']]);
-                // $equipamentoForaEscala = $sql->fetchAll(PDO::FETCH_ASSOC);
-
-                // for ($j = 0; $j < count($equipamentoForaEscala); $j++) {
-                //     $obj[$i]['equipamentoFaltaOperador'][] = $equipamentoForaEscala[$j]['tag'];
-                // }
             }
 
             if ($obj) {

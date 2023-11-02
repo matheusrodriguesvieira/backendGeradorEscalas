@@ -3,20 +3,21 @@ if ($api == 'equipamentos') {
     if ($metodo == 'GET') {
 
         if ($acao == 'index' && $parametro == '') {
+
             $db = DB::connect();
             $sql = $db->prepare("SELECT * FROM equipamentos");
             $sql->execute();
             $obj = $sql->fetchAll(PDO::FETCH_ASSOC);
 
-            if ($obj) {
-                echo json_encode($obj);
-            } else {
+            if (!$obj) {
                 $response = array(
                     "message" => "Nenhum equipamento encontrado!"
                 );
                 echo json_encode($response);
+                exit;
             }
 
+            echo json_encode($obj);
             exit;
         }
 
