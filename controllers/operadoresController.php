@@ -71,8 +71,8 @@ if ($api == 'operadores') {
                 // 3 - RETORNAR A MENSAGEM DE ERRO OU SUCESSOR
 
                 $db = DB::connect();
-                $sql = $db->prepare("SELECT * FROM operadores WHERE operadores.matricula = '{$parametro}'");
-                $sql->execute();
+                $sql = $db->prepare("SELECT * FROM operadores WHERE operadores.matricula = ?");
+                $sql->execute([$parametro]);
                 $obj = $sql->fetchObject();
 
                 if (!$obj) {
@@ -84,26 +84,26 @@ if ($api == 'operadores') {
                 $json = file_get_contents("php://input");
                 $dados = json_decode($json, true);
 
-                $sql = "UPDATE operadores SET ";
-
-                $contador = 1;
-                foreach (array_keys($dados) as $key) {
-                    if (count($dados) > $contador) {
-                        $sql .= "$key = '{$dados[$key]}', ";
-                    } else {
-                        $sql .= "$key = '{$dados[$key]}' ";
-                    }
-
-                    $contador++;
+                if (!array_key_exists('disponivel', $dados)) {
+                    echo json_encode([
+                        "message" => "Parâmetros ausentes"
+                    ]);
+                    exit;
                 }
 
-                $sql .= "WHERE operadores.matricula = '$parametro'";
+                if ($dados['disponivel'] < 0 || $dados['disponivel'] > 1 || $dados['disponivel'] == null) {
+                    echo json_encode([
+                        "message" => '"disponivel" precisa ser do tipo booleano'
+                    ]);
+                    exit;
+                }
+
 
                 // echo $sql;
-                $exec = $db->prepare($sql);
+                $exec = $db->prepare("UPDATE operadores set disponivel = ? where operadores.matricula = ?");
 
                 try {
-                    $response = $exec->execute();
+                    $response = $exec->execute([$dados['disponivel'], $parametro]);
                     echo json_encode(["message" => "Dados atualizados com sucesso!"]);
                 } catch (Exception $e) {
                     echo json_encode([

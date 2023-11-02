@@ -104,53 +104,161 @@ if ($api == 'listaEscalas') {
         if ($acao == 'update') {
             if ($parametro != "") {
 
-                // 1- VERIFICAR SE EXISTE O DADO PARA MODIFICAR;
-                // 2- MODIFICAR 
-                // 3 - RETORNAR A MENSAGEM DE ERRO OU SUCESSOR
+                // 1 - VERIFICAR SE O OPERADOR A ADICIONAR EXISTE NA LISTA DE OPERADORES FORA DE ESCALA
+                // 2 - SE EXISTE, REMOVER O OPERADOR DA LISTA DE FORA DE ESCALA
+                // 3 - SE O OPERADOR ESCALADO FOR VÁLIDO, MANDA-LO PARA A LISTA FORA DE ESCALA
+                // 4 - MODIFICAR A ESCALA, ADICIONANDO O OPERADOR
 
-                $db = DB::connect();
-
-                $sql = $db->prepare("SELECT * FROM listaescalas WHERE listaescalas.idlista = ?");
-                $sql->execute([$parametro]);
-                $obj = $sql->fetch(PDO::FETCH_ASSOC);
-
-                if (!$obj) {
-                    echo json_encode([
-                        "message" => "Não foi possível encontrar a lista"
-                    ]);
-                    exit;
-                }
-
+                // MÉTODO RECEBE UM JSON NO SEGUINTE FORMATO:
+                // {
+                //     "escala" : [
+                //         {
+                //             "matricula": MATRICULA,
+                //             "tag": TAG
+                //         },
+                //     ]
+                // }
 
                 $json = file_get_contents("php://input");
                 $dados = json_decode($json, true);
 
-                $sql = "UPDATE listaescalas SET ";
-
-                $contador = 1;
-                foreach (array_keys($dados) as $key) {
-                    if (count($dados) > $contador) {
-                        $sql .= "$key = '{$dados[$key]}', ";
-                    } else {
-                        $sql .= "$key = '{$dados[$key]}' ";
-                    }
-
-                    $contador++;
+                if (!$dados) {
+                    var_dump($dados);
+                    exit;
                 }
 
-                $sql .= "WHERE listaescalas.idlista = ?";
+                if (!array_key_exists('escala', $dados)) {
+                    $response = array(
+                        "message" => 'Parâmetro \'escala\' não encontrado.'
+                    );
+                    echo json_encode($response);
+                    exit;
+                }
 
-                // echo $sql;
-                $exec = $db->prepare($sql);
+                foreach ($dados['escala'] as $escala) {
+                    if (!array_key_exists('matricula', $escala) || !array_key_exists('tag', $escala)) {
+                        echo json_encode([
+                            "message" => "Parâmetros incompletos."
+                        ]);
+
+                        exit;
+                    }
+                }
+
+                // ---------------------------------------
+                // VERIFICANDO SE ESTÁ TENTANDO ATUALIZAR O MESMO OPERADOR EM DOIS LUGARES DISTINTOS
+                // ---------------------------------------
+                for ($i = 0; $i < count($dados['escala']); $i++) {
+                    if ($dados['escala'][$i]['matricula'] > 5) {
+                        if (count(array_values(array_filter($dados['escala'], fn ($element) => $element['matricula'] == $dados['escala'][$i]['matricula']))) > 1) {
+                            echo json_encode([
+                                "message" => "Tentando inserir operador válido em múltiplos equipamentos"
+                            ]);
+                            exit;
+                        }
+                    }
+                }
+
+                for ($i = 0; $i < count($dados['escala']); $i++) {
+                    if (count(array_values(array_filter($dados['escala'], fn ($element) => $element['tag'] == $dados['escala'][$i]['tag']))) > 1) {
+                        echo json_encode([
+                            "message" => "Equipamento escalado em múltiplos campos."
+                        ]);
+                        exit;
+                    }
+                }
+
+                $db = DB::connect();
+
+
 
                 try {
-                    $response = $exec->execute([$parametro]);
-                    echo json_encode(["message" => "Dados atualizados com sucesso!"]);
+
+                    // ---------------------------------------
+                    // VERIFICANDO SE O OPERADOR EXISTE E É AUTORIZADO A OPERAR UM EQUIPAMENTO
+                    // ---------------------------------------
+
+                    for ($i = 0; $i < count($dados['escala']); $i++) {
+                        $sql = $db->prepare('SELECT * from operadores where operadores.matricula = ?');
+                        $sql->execute([$dados['escala'][$i]['matricula']]);
+                        $operador = $sql->fetch(PDO::FETCH_ASSOC);
+
+                        if (!$operador) {
+                            echo json_encode([
+                                "message" => "Operador {$dados['escala'][$i]['matricula']} não encontrado.",
+                            ]);
+                            exit;
+                        }
+
+                        $sql = $db->prepare('SELECT * from equipamentos where equipamentos.tag = ?');
+                        $sql->execute([$dados['escala'][$i]['tag']]);
+                        $equipamento = $sql->fetch(PDO::FETCH_ASSOC);
+
+
+                        if (!$equipamento) {
+                            echo json_encode([
+                                "message" => "Equipamento {$dados['escala'][$i]['tag']} não encontrado.",
+                            ]);
+                            exit;
+                        }
+
+                        $categoria = $equipamento['categoria'];
+
+                        if (!$operador[$categoria]) {
+                            echo json_encode([
+                                "message" => "Operador {$operador['nome']} - {$operador['matricula']} não é autorizado a operar {$equipamento['tag']}",
+                            ]);
+                            exit;
+                        }
+                    }
+
+
+                    $db->beginTransaction();
+                    foreach ($dados['escala'] as $valor) {
+
+                        $sql = $db->prepare("SELECT * FROM operadorequipamento WHERE operadorequipamento.idlista = ? and operadorequipamento.tag = ?");
+                        $sql->execute([$parametro, $valor['tag']]);
+                        $obj = $sql->fetch(PDO::FETCH_ASSOC);
+
+                        if (!$obj) {
+                            throw new Exception('Escala não encontrada');
+                        }
+
+                        // ----------------------------------------
+                        // VERIFICAR SE O OPERADOR QUE ESTÁ SAINDO DA ESCALA É VÁLIDO, SE SIM, ADICIONÁLO A LISTA FORA DE ESCALA
+                        // ----------------------------------------
+                        if ($obj['matricula'] > 5) {
+                            $sql = $db->prepare("INSERT INTO operadorforaescala (matricula, idLista) VALUES (?,?)");
+                            $sql->execute([$obj['matricula'], $parametro]);
+                        }
+
+                        // ----------------------------------------
+                        // VERIFICAR SE O OPERADOR QUE ESTÁ SENDO ADICIONADO EXISTE NA LISTA FORA DE ESCALA
+                        // ----------------------------------------
+                        $sql = $db->prepare("SELECT * FROM operadorforaescala WHERE operadorforaescala.idlista = ? and operadorforaescala.matricula = ?");
+                        $sql->execute([$parametro, $valor['matricula']]);
+                        $obj = $sql->fetch(PDO::FETCH_ASSOC);
+
+                        if ($obj) {
+                            $sql = $db->prepare("DELETE FROM operadorforaescala WHERE operadorforaescala.idlista = ? and operadorforaescala.matricula = ?");
+                            $sql->execute([$parametro, $valor['matricula']]);
+                        }
+
+                        $sql = $db->prepare("UPDATE operadorequipamento SET  matricula = ? WHERE operadorequipamento.idlista = ? and operadorequipamento.tag = ?");
+                        $sql->execute([$valor['matricula'], $parametro, $valor['tag']]);
+                    }
+
+                    $db->commit();
+                    echo json_encode([
+                        "message" => "Dados atualizados com sucesso."
+                    ]);
                 } catch (Exception $e) {
                     echo json_encode([
-                        "message" => "Erro ao atualizar os dados!",
+                        "message" => "Erro ao inserir os dados.",
                         "error" => $e->getMessage(),
                     ]);
+
+                    $db->rollBack();
                 }
 
                 exit;
@@ -180,6 +288,9 @@ if ($api == 'listaEscalas') {
             // 2 - adicionar os operadores fora de escala em sua respectiva tabela
             // 3 - adicionar os equipamentos fora de escala em sua respectiva tabela
             // 4 - adicionar a escala gerada em sua respectiva tabela
+
+            // CONECTAR AO BANCO
+            $db = DB::connect();
 
             $json = file_get_contents("php://input");
             $dados = json_decode($json, true);
@@ -214,7 +325,22 @@ if ($api == 'listaEscalas') {
                 exit;
             }
 
+            foreach ($dados['escala'] as $escala) {
+                if (!array_key_exists('matricula', $escala) || !array_key_exists('tag', $escala)) {
+                    echo json_encode([
+                        "message" => "Parâmetros incompletos."
+                    ]);
 
+                    exit;
+                }
+            }
+
+
+
+
+            // ---------------------------------------
+            // VERIFICANDO SE APENAS OPERADORES VÁLIDOS ESTÃO FORA DE ESCALA
+            // ---------------------------------------
             for ($i = 0; $i < count($dados['operadoresForaEscala']); $i++) {
                 if ($dados['operadoresForaEscala'][$i] <= 5) {
                     echo json_encode([
@@ -224,6 +350,9 @@ if ($api == 'listaEscalas') {
                 }
             }
 
+            // ---------------------------------------
+            // VERIFICANDO SE O OPERADOR ESTÁ ESCALADO EM MÚLTIPLOS EQUIPAMENTOS
+            // ---------------------------------------
             for ($i = 0; $i < count($dados['escala']); $i++) {
                 if ($dados['escala'][$i]['matricula'] > 5) {
                     if (count(array_values(array_filter($dados['escala'], fn ($element) => $element['matricula'] == $dados['escala'][$i]['matricula']))) > 1) {
@@ -235,6 +364,11 @@ if ($api == 'listaEscalas') {
                 }
             }
 
+
+
+            // ---------------------------------------
+            // VERIFICANDO SE O OPERADOR ESTA ESCALADO E FORA DE ESCALA SIMULTANEAMENTE
+            // ---------------------------------------
             for ($i = 0; $i < count($dados['escala']); $i++) {
                 if (array_search($dados['escala'][$i]['matricula'], $dados['operadoresForaEscala']) !== false) {
                     echo json_encode([
@@ -244,6 +378,9 @@ if ($api == 'listaEscalas') {
                 }
             }
 
+            // ---------------------------------------
+            // VERIFICANDO SE O EQUIPAMENTO ESTÁ EM MULTIPLOS CAMPOS
+            // ---------------------------------------
             for ($i = 0; $i < count($dados['escala']); $i++) {
                 if (count(array_values(array_filter($dados['escala'], fn ($element) => $element['tag'] == $dados['escala'][$i]['tag']))) > 1) {
                     echo json_encode([
@@ -254,13 +391,45 @@ if ($api == 'listaEscalas') {
             }
 
 
-            // echo json_encode('sem erros');
-
-
-
             try {
-                // CONECTAR AO BANCO
-                $db = DB::connect();
+
+                // ---------------------------------------
+                // VERIFICANDO SE O OPERADOR EXISTE E É AUTORIZADO A OPERAR UM EQUIPAMENTO
+                // ---------------------------------------
+
+                for ($i = 0; $i < count($dados['escala']); $i++) {
+                    $sql = $db->prepare('SELECT * from operadores where operadores.matricula = ?');
+                    $sql->execute([$dados['escala'][$i]['matricula']]);
+                    $operador = $sql->fetch(PDO::FETCH_ASSOC);
+
+                    if (!$operador) {
+                        echo json_encode([
+                            "message" => "Operador {$dados['escala'][$i]['matricula']} não encontrado.",
+                        ]);
+                        exit;
+                    }
+
+                    $sql = $db->prepare('SELECT * from equipamentos where equipamentos.tag = ?');
+                    $sql->execute([$dados['escala'][$i]['tag']]);
+                    $equipamento = $sql->fetch(PDO::FETCH_ASSOC);
+
+
+                    if (!$equipamento) {
+                        echo json_encode([
+                            "message" => "Equipamento {$dados['escala'][$i]['tag']} não encontrado.",
+                        ]);
+                        exit;
+                    }
+
+                    $categoria = $equipamento['categoria'];
+
+                    if (!$operador[$categoria]) {
+                        echo json_encode([
+                            "message" => "Operador {$operador['nome']} - {$operador['matricula']} não é autorizado a operar {$equipamento['tag']}",
+                        ]);
+                        exit;
+                    }
+                }
 
                 // INICIA A TRANSAÇÃO
                 $db->beginTransaction();
