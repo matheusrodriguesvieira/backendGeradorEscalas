@@ -6,6 +6,10 @@ if ($api == 'listaEscalas') {
             // 1 - PEGAR TODAS AS LISTAS DE ESCALAS E ADICIONAR AS PROPRIEDADES escala, operadoresForaEscala e equipamentosForaEscala como arrays vazios;
             // 2 - FAZER UM LAÇO DE REPETIÇÃO E A CADA LISTA, PEGAR TODOS AS ESCALAS CORRESPONDENTES E ADICIONAR AO ARRAU
 
+            // RECEBE COMO PARÂMETRO UM JSON:
+            // {
+            //     "turma":TURMA
+            // }
             $json = file_get_contents("php://input");
             $dados = json_decode($json, true);
 
@@ -61,6 +65,10 @@ if ($api == 'listaEscalas') {
         }
 
         if ($acao == 'show' && $parametro != '') {
+            // RECEBE COMO PARÂMETRO UM JSON:
+            // {
+            //     "turma":TURMA
+            // }
             $db = DB::connect();
             $sql = $db->prepare("SELECT * FROM listaescalas WHERE listaescalas.idlista = ?");
             $sql->execute([$parametro]);

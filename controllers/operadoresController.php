@@ -4,7 +4,7 @@ if ($api == 'operadores') {
         if ($acao == 'index' && $parametro == '') {
 
             // ---------------------------------------
-            // PEGA TODOS OS EQUIPAMENTOS
+            // PEGA TODOS OS OPERADORES
             // ---------------------------------------
 
             $json = file_get_contents("php://input");
@@ -45,7 +45,7 @@ if ($api == 'operadores') {
 
         if ($acao == 'show' && $parametro != '') {
             // ---------------------------------------
-            // PEGA UM EQUIPAMENTO ESPECÍFICO
+            // PEGA UM OPERADOR ESPECÍFICO
             // ---------------------------------------
 
 
@@ -73,6 +73,11 @@ if ($api == 'operadores') {
                 // 1- VERIFICAR SE EXISTE O DADO PARA MODIFICAR;
                 // 2- MODIFICAR 
                 // 3 - RETORNAR A MENSAGEM DE ERRO OU SUCESSOR
+
+                // RECEBE UM JSON COM O SEGUINTE FORMATO:
+                // {
+                //     "disponivel": BOOLEANO 
+                // }
 
                 $db = DB::connect();
                 $sql = $db->prepare("SELECT * FROM operadores WHERE operadores.matricula = ?");
