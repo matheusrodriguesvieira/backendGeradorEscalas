@@ -1,5 +1,6 @@
 <?php
 header('Access-Control-Allow-Origin: *');
+header("Access-Control-Allow-Headers: Content-Type");
 
 if (isset($_GET['path'])) {
     $path = explode('/', $_GET['path']);
