@@ -26,6 +26,7 @@ if ($api == 'operadores') {
                 exit;
             }
 
+
             $db = DB::connect();
             $sql = $db->prepare("SELECT * FROM operadores WHERE operadores.turma = ?");
             $sql->execute([$dados['turma']]);
