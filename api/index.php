@@ -5,6 +5,14 @@ header("Access-Control-Allow-Headers: Content-Type");
 if (isset($_GET['path'])) {
     $path = explode('/', $_GET['path']);
 } else {
+
+    $response = array(
+        "message" => "Nenhum equipamento encontrado!"
+    );
+
+    echo $response;
+    exit;
+
     echo 'caminho não existe';
     exit;
 }
