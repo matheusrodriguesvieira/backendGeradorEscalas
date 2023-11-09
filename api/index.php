@@ -10,7 +10,7 @@ if (isset($_GET['path'])) {
         "message" => "Nenhum equipamento encontrado!"
     );
 
-    echo $response;
+    echo json_encode($response);
     exit;
 
     echo 'caminho não existe';
